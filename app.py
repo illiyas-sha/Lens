@@ -1,10 +1,18 @@
 import streamlit as st
 
+from auth.ui import current_user, logout, require_login
+
 st.set_page_config(page_title="Lens", page_icon="🔍", layout="wide")
+
+require_login()
+
+user = current_user()
+
+with st.sidebar:
+    st.write(f"Logged in as **{user.email}**")
+    if st.button("Log out"):
+        logout()
+        st.rerun()
 
 st.title("Lens")
 st.write("Base Streamlit app is up and running.")
-
-name = st.text_input("What's your name?")
-if name:
-    st.write(f"Hello, {name}!")
