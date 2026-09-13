@@ -31,12 +31,19 @@ create table components (
 comment on column components.weightage_marks is
   'Marks this component contributes to the course total (its converted/scaled max), not a percentage. E.g. raw max_marks=30 scaled to weightage_marks=15.';
 
+create extension if not exists pgcrypto;
+
+-- Custom auth (not Supabase Auth): email + bcrypt password_hash live here
+-- directly. The app uses the service_role key server-side and enforces
+-- access control in application code instead of RLS/auth.uid().
 create table students (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
   full_name text not null,
   nick_name text,
   section text,
-  email text not null,
+  email text not null unique,
+  password_hash text not null,
+  is_admin boolean not null default false,
   created_at timestamptz not null default now()
 );
 

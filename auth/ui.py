@@ -1,7 +1,9 @@
 import streamlit as st
 
+from auth.security import hash_password, verify_password
 from auth.supabase_client import get_supabase_client
 from auth.validators import is_valid_college_email
+from config import SECTIONS
 
 COLLEGE_EMAIL_HINT = "Please enter your correct institution email address."
 
@@ -15,27 +17,7 @@ def current_user():
 
 
 def logout():
-    supabase = get_supabase_client()
-    supabase.auth.sign_out()
-    st.session_state.pop("auth_session", None)
     st.session_state.pop("auth_user", None)
-
-
-def _set_session(session, user):
-    st.session_state["auth_session"] = session
-    st.session_state["auth_user"] = user
-
-
-def _ensure_student_profile(supabase, user):
-    """Create the student's profile row on first login, now that they have
-    an authenticated session (RLS requires auth.uid() == id)."""
-    full_name = (user.user_metadata or {}).get("full_name", "")
-    try:
-        supabase.table("students").upsert(
-            {"id": user.id, "full_name": full_name, "email": user.email}
-        ).execute()
-    except Exception as e:
-        st.warning(f"Profile sync failed: {e}")
 
 
 def login_form():
@@ -47,27 +29,36 @@ def login_form():
     if not submitted:
         return
 
+    email = email.strip().lower()
     if not is_valid_college_email(email):
         st.error(COLLEGE_EMAIL_HINT)
         return
 
     supabase = get_supabase_client()
-    try:
-        result = supabase.auth.sign_in_with_password(
-            {"email": email, "password": password}
-        )
-    except Exception as e:
-        st.error(f"Login failed: {e}")
+    result = supabase.table("students").select("*").eq("email", email).execute()
+    rows = result.data
+
+    if not rows or not verify_password(password, rows[0]["password_hash"]):
+        st.error("Incorrect email or password.")
         return
 
-    _set_session(result.session, result.user)
-    _ensure_student_profile(supabase, result.user)
+    student = rows[0]
+    st.session_state["auth_user"] = {
+        "id": student["id"],
+        "email": student["email"],
+        "full_name": student["full_name"],
+        "section": student.get("section"),
+        "is_admin": student.get("is_admin", False),
+    }
     st.rerun()
 
 
 def signup_form():
     with st.form("signup_form"):
         full_name = st.text_input("Full name")
+        section = st.selectbox(
+            "Section", SECTIONS, index=None, placeholder="Select a section"
+        )
         email = st.text_input("College email")
         password = st.text_input("Password", type="password")
         confirm_password = st.text_input("Confirm password", type="password")
@@ -76,11 +67,21 @@ def signup_form():
     if not submitted:
         return
 
+    email = email.strip().lower()
     if not full_name.strip():
         st.error("Full name is required.")
         return
+    if not section:
+        st.error("Please select a section.")
+        return
+    if not email:
+        st.error("College email is required.")
+        return
     if not is_valid_college_email(email):
         st.error(COLLEGE_EMAIL_HINT)
+        return
+    if not password or not confirm_password:
+        st.error("Password and confirm password are required.")
         return
     if len(password) < 8:
         st.error("Password must be at least 8 characters.")
@@ -89,21 +90,22 @@ def signup_form():
         st.error("Passwords do not match.")
         return
 
-    email = email.strip().lower()
     supabase = get_supabase_client()
-    try:
-        supabase.auth.sign_up(
-            {
-                "email": email,
-                "password": password,
-                "options": {"data": {"full_name": full_name.strip()}},
-            }
-        )
-    except Exception as e:
-        st.error(f"Sign up failed: {e}")
+    existing = supabase.table("students").select("id").eq("email", email).execute()
+    if existing.data:
+        st.error("An account with that email already exists.")
         return
 
-    st.success("Account created! Check your email to confirm, then log in.")
+    supabase.table("students").insert(
+        {
+            "full_name": full_name.strip(),
+            "section": section,
+            "email": email,
+            "password_hash": hash_password(password),
+        }
+    ).execute()
+
+    st.success("Account created! You can log in now.")
 
 
 def auth_page():

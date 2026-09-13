@@ -9,7 +9,7 @@ require_login()
 user = current_user()
 
 with st.sidebar:
-    st.write(f"Logged in as **{user.email}**")
+    st.write(f"Logged in as **{user['full_name']}**")
     if st.button("Log out"):
         logout()
         st.rerun()

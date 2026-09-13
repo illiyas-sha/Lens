@@ -2,12 +2,17 @@ import streamlit as st
 from supabase import Client, create_client
 
 
+@st.cache_resource
 def get_supabase_client() -> Client:
-    """One Supabase client per browser session (not cached across users) —
-    a logged-in client carries that user's session token internally, so
-    sharing one instance across sessions would leak it between users."""
-    if "supabase_client" not in st.session_state:
-        url = st.secrets["SUPABASE_URL"]
-        key = st.secrets["SUPABASE_ANON_KEY"]
-        st.session_state["supabase_client"] = create_client(url, key)
-    return st.session_state["supabase_client"]
+    """Uses the service_role (secret) key, not the publishable/anon key.
+
+    This is safe here because Streamlit code runs entirely server-side —
+    the browser never sees this key or talks to Supabase directly. We're
+    doing our own email/password auth (see auth/security.py) instead of
+    Supabase Auth, so there's no per-user session to isolate: every
+    request uses this same static key, and authorization (who can see
+    what) is enforced in application code, not RLS/auth.uid().
+    """
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
+    return create_client(url, key)
