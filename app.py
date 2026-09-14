@@ -1,6 +1,7 @@
 import streamlit as st
 
 from admin.ui import render as render_admin
+from analytics.ui import render as render_overview
 from auth.ui import auth_page, current_user, is_logged_in, logout
 from scores.ui import render as render_scores
 
@@ -26,6 +27,7 @@ else:
     pages = [
         st.Page(home_page, title="Home", url_path="home", default=True),
         st.Page(render_scores, title="Score Entry", url_path="score-entry"),
+        st.Page(render_overview, title="Term Overview", url_path="term-overview"),
     ]
     if user.get("is_admin"):
         pages.append(st.Page(render_admin, title="Admin", url_path="admin"))
