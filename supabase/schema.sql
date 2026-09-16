@@ -58,3 +58,16 @@ create table scores (
   unique (component_id, student_id),
   check (marks_obtained <= max_marks)
 );
+
+-- full_name/email are stored directly (not just via student_id) so feedback
+-- rows are readable at a glance in the Supabase Table Editor without a join.
+create table feedback (
+  id bigint generated always as identity primary key,
+  student_id uuid not null references students(id) on delete cascade,
+  full_name text not null,
+  email text not null,
+  rating smallint not null check (rating between 1 and 10),
+  comments text,
+  enhancement_request text,
+  created_at timestamptz not null default now()
+);

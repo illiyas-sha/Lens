@@ -3,6 +3,7 @@ import streamlit as st
 from admin.ui import render as render_admin
 from analytics.ui import render as render_overview
 from auth.ui import auth_page, current_user, is_logged_in, logout
+from feedback.ui import render as render_feedback
 from scores.ui import render as render_scores
 
 st.set_page_config(page_title="Lens", page_icon="🔍", layout="wide")
@@ -16,6 +17,13 @@ def home_page():
         "Lens is your academic tracker and analytics dashboard for the program — PGPBM.  "
         "Submit your component scores and see exactly where you stand "
         "term by term."
+    )
+    st.info(
+        "**💡 The numbers here are just to show how far you are from the mean "
+        "— nothing more. The real goal is learning, so keep exploring and "
+        "picking up new things along the way.**\n\n"
+        '*"The beautiful thing about learning is that no one can take it '
+        'away from you."* — B.B. King'
     )
 
     st.divider()
@@ -56,7 +64,12 @@ def home_page():
         "course by course\n"
         "- **Radar chart** — your relative performance across all courses "
         "at a glance\n"
-        "- **Trend chart** — your improvement analytics term by term"
+    )
+
+    st.info(
+        '*"If we own land, they will grab it. If we have money, they will '
+        "snatch it away. But our education & skills... no one can ever take "
+        'that away from us"* — Sivasamy'
     )
 
     st.divider()
@@ -83,6 +96,7 @@ else:
         st.Page(home_page, title="Home", url_path="home", default=True),
         st.Page(render_scores, title="Score Entry", url_path="score-entry"),
         st.Page(render_overview, title="Term Overview", url_path="term-overview"),
+        st.Page(render_feedback, title="Feedback", url_path="feedback"),
     ]
     if user.get("is_admin"):
         pages.append(st.Page(render_admin, title="Admin", url_path="admin"))
